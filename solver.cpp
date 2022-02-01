@@ -45,20 +45,15 @@ int to_state(string &guess, string &target, vector<int> &have_char) {
 
 typedef pair<string, int> Round;
 typedef vector<Round> History;
-History input_history() {
-    cout << "n (guessed count): ";
-    int n;
-    cin >> n;
-    vector<Round> history;
-    cout << "now input word state (example: \"lares -YY-g\", Y for yellow, g for green):" << endl;
-    for (int i = 0; i < n; i++) {
-        string word, state_string; 
-        cout << "word_" << i << " state_" << i << ": ";
-        cin >> word >> state_string;
+History input_history(string history_string) {
+    History history;
+    for (int q = 0; q + 10 < history_string.size(); q += 12) {
+        string word = history_string.substr(q, 5);
+        string state_string = history_string.substr(q + 6, 5);
+        cout << word << " " << state_string << endl;
         int p = 1;
         int state = 0;
         for (int i = 0; i < 5; i++) {
-            int j = 4 - i;
             if (state_string[i] == 'G' || state_string[i] == 'g') {
                 state += (p << 1);
             } else if (state_string[i] == 'Y' || state_string[i] == 'y') {
@@ -69,6 +64,7 @@ History input_history() {
             }
             p *= 3;
         }
+        cout << state << endl;
         history.push_back(make_pair(word, state));
     }
     return history;
@@ -91,23 +87,37 @@ vector<string> filter_candidates(vector<string> candidates_in, History history, 
     return candidates;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        // pre computed result
+        cout << "lares" << endl;
+        return 0;
+    }
+    if (argc == 2 && string(argv[1]) == "help") {
+        cout << "solver <history> [v]" << endl;
+        cout << "  solver weary,--yg-,pills,-----" << endl;
+        cout << "  solver weary,--yg-,pills,----- v (verbose)" << endl;
+    }
+    int verbose = false;
+    if (argc == 3) {
+        verbose = true;
+    }
+
     // shared global vector
     vector<int> have_char;
     for (int i = 0; i < 26; i++) {
         have_char.push_back(0);
     }
+    History history = input_history(string(argv[1]));
 
     vector<string> candidates = load_data("dictionary.json");
 
-    History history = input_history();
-    for (auto &r : history) {
-        cout << r.first << "  " << r.second << endl;
-    }
     candidates = filter_candidates(candidates, history, have_char);
 
-    int n = candidates.size();    
-    cout << "number of candidates: " << n << endl;
+    int n = candidates.size();
+    if (verbose) {
+        cout << "number of candidates: " << n << endl;
+    }
 
     int min_exp = n * n;
     string min_guess;
@@ -124,14 +134,17 @@ int main() {
         for (int i = 0; i < 243; i++) {
             exp += freq[i] * freq[i];
         }
-        if (exp < min_exp) {
+        if (exp <= min_exp) {
             min_exp = exp;
             min_guess = guess;
         }
     }
 
-    cout << "Best guess: " << min_guess
-         << ", with E(# candidates after guess) = " << 1. * min_exp / n << endl;
-    
+    if (verbose) {
+        cout << "Best guess: " << min_guess
+            << ", with E(# candidates after guess) = " << 1. * min_exp / n << endl;
+    } else {
+        cout << min_guess << endl;
+    }
     return 0;
 }
