@@ -95,8 +95,10 @@ int main(int argc, char *argv[]) {
     }
     if (argc == 2 && string(argv[1]) == "help") {
         cout << "solver <history> [v]" << endl;
+        cout << "  solver" << endl;
         cout << "  solver weary,--yg-,pills,-----" << endl;
         cout << "  solver weary,--yg-,pills,----- v (verbose)" << endl;
+        return 0;
     }
     int verbose = false;
     if (argc == 3) {
