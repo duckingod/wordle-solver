@@ -50,7 +50,6 @@ History input_history(string history_string) {
     for (int q = 0; q + 10 < history_string.size(); q += 12) {
         string word = history_string.substr(q, 5);
         string state_string = history_string.substr(q + 6, 5);
-        cout << word << " " << state_string << endl;
         int p = 1;
         int state = 0;
         for (int i = 0; i < 5; i++) {
@@ -64,7 +63,6 @@ History input_history(string history_string) {
             }
             p *= 3;
         }
-        cout << state << endl;
         history.push_back(make_pair(word, state));
     }
     return history;
