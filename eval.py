@@ -47,7 +47,7 @@ for answer in pbar:
         input = prepare_input(history)
         guess = find_best_guess(input)
         state = check_state(guess, answer)
-        print(guess, state)
+        pbar.write(f"{guess} {state}")
         if state == "ggggg":
             tp += 1
             break
