@@ -22,20 +22,17 @@ def check_state(guess, answer):
 
 def parse_guess(out: str):
     last_line = out.splitlines()[-1]
-    return last_line[len(template) : len(template) + 5]
+    return last_line.strip()
 
 
 def prepare_input(history):
-    return f"{len(history)}\n" + "".join(
-        f"{guess} {state}\n" for guess, state in history
-    )
+    return ",".join(f"{guess},{state}" for guess, state in history)
 
 
 @lru_cache()
 def find_best_guess(input):
     proc = subprocess.run(
-        "./a.out",
-        input=input,
+        ["./a.out", input],
         encoding="UTF-8",
         capture_output=True,
     )
