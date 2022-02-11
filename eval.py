@@ -32,7 +32,7 @@ def prepare_input(history):
 @lru_cache()
 def find_best_guess(input):
     proc = subprocess.run(
-        ["./a.out", input],
+        ["./a.out", "--input", input],
         encoding="UTF-8",
         capture_output=True,
     )
