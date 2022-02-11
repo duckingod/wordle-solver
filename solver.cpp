@@ -3,14 +3,10 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <cstdlib>
-#include <utility>
-#include <algorithm>
 
 using namespace std;
 
 vector<string> LoadData(string file_name) {
-    fstream myfile;
     std::ifstream f(file_name);
     std::stringstream ss;
     ss << f.rdbuf(); //read the file
