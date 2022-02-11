@@ -5,6 +5,7 @@
 #include <string>
 #include <cstdlib>
 #include <utility>
+#include <algorithm>
 
 using namespace std;
 
@@ -23,7 +24,30 @@ vector<string> load_data(string file_name) {
     return result;
 }
 
-int to_state(string &guess, string &target, vector<int> &have_char) {
+typedef pair<string, int> Round;
+typedef vector<Round> History;
+
+struct Context {
+    vector<string> vocabulary;
+    vector<string> candidates;
+    vector<int> have_char;
+    int verbose;
+
+    Context(int _verbose): verbose(_verbose) {
+        // shared global vector
+        for (int i = 0; i < 26; i++) {
+            have_char.push_back(0);
+        }
+        vocabulary = load_data("dictionary.json");
+        reset_candidates();
+    }
+
+    void reset_candidates() {
+        candidates = vocabulary;
+    }
+};
+
+int compute_state(const string &guess, const string &target, vector<int> &have_char) {
     for (auto c : target) {
         have_char[c - 'a'] = 1;
     }
@@ -43,104 +67,87 @@ int to_state(string &guess, string &target, vector<int> &have_char) {
     return state;
 }
 
-typedef pair<string, int> Round;
-typedef vector<Round> History;
+int to_state(string state_string) {
+    int power = 1;
+    int state = 0;
+    for (int i = 0; i < 5; i++) {
+        if (state_string[i] == 'G' || state_string[i] == 'g') {
+            state += (power << 1);
+        } else if (state_string[i] == 'Y' || state_string[i] == 'y') {
+            state += power;
+        } else if (state_string[i] != '-') {
+            cout << "input a invalid state: " << state_string << endl;
+            exit(-1);
+        }
+        power *= 3;
+    }
+    return state;
+}
+
 History input_history(string history_string) {
     History history;
     for (int q = 0; q + 10 < history_string.size(); q += 12) {
         string word = history_string.substr(q, 5);
         string state_string = history_string.substr(q + 6, 5);
-        int p = 1;
-        int state = 0;
-        for (int i = 0; i < 5; i++) {
-            if (state_string[i] == 'G' || state_string[i] == 'g') {
-                state += (p << 1);
-            } else if (state_string[i] == 'Y' || state_string[i] == 'y') {
-                state += p;
-            } else if (state_string[i] != '-') {
-                cout << "input a invalid state: " << state_string << endl;
-                exit(-1);
-            }
-            p *= 3;
-        }
-        history.push_back(make_pair(word, state));
+        history.push_back(make_pair(word, to_state(state_string)));
     }
     return history;
 }
 
-vector<string> filter_candidates(vector<string> candidates_in, History history, vector<int> &have_char) {
-    vector<string> candidates;
-    for (auto &candidate : candidates_in) {
+vector<string> compute_candidates(Context &context, Round round) {
+    vector<string> new_candidates;
+    for (auto &candidate : context.candidates) {
         int flag = 1;
-        for (auto round : history) {
-            if (to_state(round.first, candidate, have_char) != round.second) {
-                flag = 0;
-                break;
-            }
-        }
-        if (flag) {
-            candidates.push_back(candidate);
+        const string &guess = round.first;
+        const int &state = round.second;
+        const int candidate_state = compute_state(guess, candidate, context.have_char);
+        if (candidate_state == state) {
+            new_candidates.push_back(candidate);
         }
     }
-    return candidates;
+    return new_candidates;
 }
 
-int main(int argc, char *argv[]) {
-    if (argc == 1) {
+
+int cmdOptionIndex(int argc, char* argv[], const std::string & option) {
+    char **iter = std::find(argv, argv + argc, option);
+    if (iter == argv + argc) {
+        return -1;
+    }
+    return iter - argv;
+}
+
+string solve(Context &context) {
+    if (context.candidates.size() == context.vocabulary.size()) {
         // pre computed result
-        cout << "lares" << endl;
-        return 0;
-    }
-    if (argc == 2 && string(argv[1]) == "help") {
-        cout << "solver <history> [v]" << endl;
-        cout << "  solver" << endl;
-        cout << "  solver weary,--yg-,pills,-----" << endl;
-        cout << "  solver weary,--yg-,pills,----- v (verbose)" << endl;
-        return 0;
-    }
-    int verbose = false;
-    if (argc == 3) {
-        verbose = true;
-    }
-
-    // shared global vector
-    vector<int> have_char;
-    for (int i = 0; i < 26; i++) {
-        have_char.push_back(0);
-    }
-    History history = input_history(string(argv[1]));
-
-    vector<string> vocabulary = load_data("dictionary.json");
-
-    vector<string> candidates = filter_candidates(vocabulary, history, have_char);
-
-    int n = candidates.size();
-    if (verbose) {
-        cout << "number of candidates: " << n << endl;
-        if (n <= 20) {
-            for (auto &ans : candidates) {
-                 cout << ans << endl;
-            }
+        if (context.verbose) {
+            cout << "using precomputed result when no clue" << endl; 
         }
+        return "lares";
     }
 
+    int n = context.candidates.size();
     if (n == 1) {
-        if (verbose) {
-            cout << "The only candidate is ";
+        if (context.verbose) {
+            cout << "The only candidate is " << context.candidates[0] << endl;;
         }
-        cout << candidates[0] << endl;
-        return 0;
+        return context.candidates[0];
+    } else if (n == 0) {
+        if (context.verbose) {
+            cout << "Bugged QQ, zero candidate from given history hence we cannot guess" << endl;;
+        }
+        return "";
     }
 
     int min_exp = n * n;
     string min_guess;
-    for (auto &guess : vocabulary) {
+    for (auto &guess : context.vocabulary) {
         vector<int> freq;
         for (int i = 0; i < 243; i++) {
             freq.push_back(0);
         }
-        for (auto &ans : candidates) {
-            int state = to_state(guess, ans, have_char);
+        for (auto &ans : context.candidates) {
+            int state = compute_state(guess, ans, context.have_char);
             freq[state] += 1;
         }
         int exp = 0;
@@ -153,11 +160,74 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (verbose) {
+    if (context.verbose) {
+        cout << "number of candidates: " << n << endl;
+        if (n <= 20) {
+            for (auto &ans : context.candidates) {
+                 cout << ans << endl;
+            }
+        }
         cout << "Best guess: " << min_guess
             << ", with E(# candidates after guess) = " << 1. * min_exp / n << endl;
-    } else {
-        cout << min_guess << endl;
     }
+    return min_guess;
+}
+
+string solve_single_round(Context &context, string &history_string) {
+    History history = input_history(history_string);
+    for (const auto &round: history) {
+        vector<string> new_candidates = compute_candidates(context, round);
+        context.candidates = new_candidates;
+    }
+    return solve(context);
+}
+
+int solve_interactive(Context &context) {
+    bool terminate = false;
+    context.reset_candidates();
+    while (true) {
+        string guess = solve(context);
+        string state_string;
+        cout << guess << endl;
+        cin >> state_string;
+
+        if (state_string == "next") {
+            return 1;
+        } else if (state_string.size() != 5){
+            return 0;
+        }
+
+        Round round = make_pair(guess, to_state(state_string));
+        context.candidates = compute_candidates(context, round);
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (cmdOptionIndex(argc, argv, "--help") != -1) {
+        cout << "solver [-v] [-i] [-s <history>]" << endl;
+        cout << "  solver (one time, no input)" << endl;
+        cout << "  solver -s weary,--yg-,pills,----- (one time)" << endl;
+        cout << "  solver -s weary,--yg-,pills,----- -v (one time, verbose)" << endl;
+        cout << "  solver --interactive" << endl;
+        return 0;
+    }
+    const int verbose = cmdOptionIndex(argc, argv, "-v") != -1;
+    const int interactive = cmdOptionIndex(argc, argv, "-i") != -1;
+    Context context = Context(verbose);
+    if (interactive) {
+        while (solve_interactive(context));
+    } else {
+        // + 1 to get the param after -s
+        int input_index = cmdOptionIndex(argc, argv, "-s") + 1;
+        string history_string;
+        if (input_index != 0) {
+            history_string = string(argv[input_index]);
+        } else {
+            history_string = string();
+        }
+
+        cout << solve_single_round(context, history_string) << endl;
+    }
+
     return 0;
 }
