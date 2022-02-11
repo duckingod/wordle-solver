@@ -39,9 +39,7 @@ def find_best_guess(input):
     return parse_guess(proc.stdout)
 
 
-tp = 0
-pbar = tqdm(words)
-for answer in pbar:
+def start_game(answer):
     history = []
     for _ in range(6):
         input = prepare_input(history)
@@ -49,8 +47,15 @@ for answer in pbar:
         state = check_state(guess, answer)
         pbar.write(f"{guess} {state}")
         if state == "ggggg":
-            tp += 1
-            break
+            return True
         history.append((guess, state))
+
+
+tp = 0
+pbar = tqdm(words)
+for answer in pbar:
+    is_win = start_game(answer)
+    if is_win:
+        tp += 1
 
 print(tp / len(words))
