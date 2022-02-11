@@ -4,7 +4,7 @@
 
 ```bash=
 cd wordle-solver
-g++ solver.cpp  -std=c++11 && ./a.out
+g++ solver.cpp -std=c++11 -o solver && ./solver
 ```
 
 ## Run
@@ -19,7 +19,7 @@ weary
 
 ## Interactive
 ```
-... solver --interactive
+... ./solver --interactive
 >>> lares
 ... y-yg-
 >>> flour
