@@ -5,7 +5,6 @@ from functools import lru_cache
 from tqdm import tqdm
 
 words = json.load(open("dictionary.json"))
-template = "Best guess: "
 
 
 def check_state(guess, answer):
