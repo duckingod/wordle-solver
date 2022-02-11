@@ -204,21 +204,21 @@ int solve_interactive(Context &context) {
 
 int main(int argc, char *argv[]) {
     if (cmdOptionIndex(argc, argv, "--help") != -1) {
-        cout << "solver [-v] [-i] [-s <history>]" << endl;
+        cout << "solver [options]" << endl;
         cout << "  solver (one time, no input)" << endl;
-        cout << "  solver -s weary,--yg-,pills,----- (one time)" << endl;
-        cout << "  solver -s weary,--yg-,pills,----- -v (one time, verbose)" << endl;
+        cout << "  solver --input weary,--yg-,pills,----- (one time)" << endl;
+        cout << "  solver --input weary,--yg-,pills,----- --verbose (one time, verbose)" << endl;
         cout << "  solver --interactive" << endl;
         return 0;
     }
-    const int verbose = cmdOptionIndex(argc, argv, "-v") != -1;
-    const int interactive = cmdOptionIndex(argc, argv, "-i") != -1;
+    const int verbose = cmdOptionIndex(argc, argv, "--verbose") != -1;
+    const int interactive = cmdOptionIndex(argc, argv, "--interactive") != -1;
     Context context = Context(verbose);
     if (interactive) {
         while (solve_interactive(context));
     } else {
         // + 1 to get the param after -s
-        int input_index = cmdOptionIndex(argc, argv, "-s") + 1;
+        int input_index = cmdOptionIndex(argc, argv, "--input") + 1;
         string history_string;
         if (input_index != 0) {
             history_string = string(argv[input_index]);
