@@ -1,6 +1,7 @@
 import json
 import subprocess
 from functools import lru_cache
+from multiprocessing.dummy import Pool
 
 from tqdm import tqdm
 
@@ -52,9 +53,10 @@ def start_game(answer):
 
 tp = 0
 pbar = tqdm(words)
-for answer in pbar:
-    is_win = start_game(answer)
-    if is_win:
-        tp += 1
+with Pool() as pool:
+    iter_games = pool.imap_unordered(start_game, words)
+    for is_win in tqdm(iter_games, total=len(words)):
+        if is_win:
+            tp += 1
 
 print(tp / len(words))
