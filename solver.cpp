@@ -110,18 +110,31 @@ int main(int argc, char *argv[]) {
     }
     History history = input_history(string(argv[1]));
 
-    vector<string> candidates = load_data("dictionary.json");
+    vector<string> vocabulary = load_data("dictionary.json");
 
-    candidates = filter_candidates(candidates, history, have_char);
+    vector<string> candidates = filter_candidates(vocabulary, history, have_char);
 
     int n = candidates.size();
     if (verbose) {
         cout << "number of candidates: " << n << endl;
+        if (n <= 20) {
+            for (auto &ans : candidates) {
+                 cout << ans << endl;
+            }
+        }
+    }
+
+    if (n == 1) {
+        if (verbose) {
+            cout << "The only candidate is ";
+        }
+        cout << candidates[0] << endl;
+        return 0;
     }
 
     int min_exp = n * n;
     string min_guess;
-    for (auto &guess : candidates) {
+    for (auto &guess : vocabulary) {
         vector<int> freq;
         for (int i = 0; i < 243; i++) {
             freq.push_back(0);
@@ -134,7 +147,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < 243; i++) {
             exp += freq[i] * freq[i];
         }
-        if (exp <= min_exp) {
+        if (min_exp >= exp) {
             min_exp = exp;
             min_guess = guess;
         }
