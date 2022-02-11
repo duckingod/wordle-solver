@@ -9,7 +9,7 @@
 
 using namespace std;
 
-vector<string> load_data(string file_name) {
+vector<string> LoadData(string file_name) {
     fstream myfile;
     std::ifstream f(file_name);
     std::stringstream ss;
@@ -38,16 +38,16 @@ struct Context {
         for (int i = 0; i < 26; i++) {
             have_char.push_back(0);
         }
-        vocabulary = load_data("dictionary.json");
-        reset_candidates();
+        vocabulary = LoadData("dictionary.json");
+        ResetCandidates();
     }
 
-    void reset_candidates() {
+    void ResetCandidates() {
         candidates = vocabulary;
     }
 };
 
-int compute_state(const string &guess, const string &target, vector<int> &have_char) {
+int ComputeState(const string &guess, const string &target, vector<int> &have_char) {
     for (auto c : target) {
         have_char[c - 'a'] = 1;
     }
@@ -67,7 +67,7 @@ int compute_state(const string &guess, const string &target, vector<int> &have_c
     return state;
 }
 
-int to_state(string state_string) {
+int ToState(string state_string) {
     int power = 1;
     int state = 0;
     for (int i = 0; i < 5; i++) {
@@ -84,23 +84,13 @@ int to_state(string state_string) {
     return state;
 }
 
-History input_history(string history_string) {
-    History history;
-    for (int q = 0; q + 10 < history_string.size(); q += 12) {
-        string word = history_string.substr(q, 5);
-        string state_string = history_string.substr(q + 6, 5);
-        history.push_back(make_pair(word, to_state(state_string)));
-    }
-    return history;
-}
-
-vector<string> compute_candidates(Context &context, Round round) {
+vector<string> ComputeCandidates(Context &context, Round round) {
     vector<string> new_candidates;
     for (auto &candidate : context.candidates) {
         int flag = 1;
         const string &guess = round.first;
         const int &state = round.second;
-        const int candidate_state = compute_state(guess, candidate, context.have_char);
+        const int candidate_state = ComputeState(guess, candidate, context.have_char);
         if (candidate_state == state) {
             new_candidates.push_back(candidate);
         }
@@ -108,18 +98,9 @@ vector<string> compute_candidates(Context &context, Round round) {
     return new_candidates;
 }
 
-
-int cmdOptionIndex(int argc, char* argv[], const std::string & option) {
-    char **iter = std::find(argv, argv + argc, option);
-    if (iter == argv + argc) {
-        return -1;
-    }
-    return iter - argv;
-}
-
-string solve(Context &context) {
+string Solve(Context &context) {
     if (context.candidates.size() == context.vocabulary.size()) {
-        // pre computed result
+        // pre computed result since it's too slow when candidates too much
         if (context.verbose) {
             cout << "using precomputed result when no clue" << endl; 
         }
@@ -147,7 +128,7 @@ string solve(Context &context) {
             freq.push_back(0);
         }
         for (auto &ans : context.candidates) {
-            int state = compute_state(guess, ans, context.have_char);
+            int state = ComputeState(guess, ans, context.have_char);
             freq[state] += 1;
         }
         int exp = 0;
@@ -173,20 +154,38 @@ string solve(Context &context) {
     return min_guess;
 }
 
-string solve_one_time(Context &context, string &history_string) {
-    History history = input_history(history_string);
-    for (const auto &round: history) {
-        vector<string> new_candidates = compute_candidates(context, round);
-        context.candidates = new_candidates;
+History InputHistory(string history_string) {
+    History history;
+    for (int q = 0; q + 10 < history_string.size(); q += 12) {
+        string word = history_string.substr(q, 5);
+        string state_string = history_string.substr(q + 6, 5);
+        history.push_back(make_pair(word, ToState(state_string)));
     }
-    return solve(context);
+    return history;
 }
 
-int solve_interactive(Context &context) {
+string SolveOneTime(Context &context, string &history_string) {
+    History history = InputHistory(history_string);
+    for (const auto &round: history) {
+        vector<string> new_candidates = ComputeCandidates(context, round);
+        context.candidates = new_candidates;
+    }
+    return Solve(context);
+}
+
+int CmdOptionIndex(int argc, char* argv[], const std::string & option) {
+    char **iter = std::find(argv, argv + argc, option);
+    if (iter == argv + argc) {
+        return -1;
+    }
+    return iter - argv;
+}
+
+int SolveInteractive(Context &context) {
     bool terminate = false;
-    context.reset_candidates();
+    context.ResetCandidates();
     while (true) {
-        string guess = solve(context);
+        string guess = Solve(context);
         string state_string;
         cout << guess << endl;
         cin >> state_string;
@@ -197,13 +196,13 @@ int solve_interactive(Context &context) {
             return 0;
         }
 
-        Round round = make_pair(guess, to_state(state_string));
-        context.candidates = compute_candidates(context, round);
+        Round round = make_pair(guess, ToState(state_string));
+        context.candidates = ComputeCandidates(context, round);
     }
 }
 
 int main(int argc, char *argv[]) {
-    if (cmdOptionIndex(argc, argv, "--help") != -1) {
+    if (CmdOptionIndex(argc, argv, "--help") != -1) {
         cout << "solver [options]" << endl;
         cout << "  solver (one time, no input)" << endl;
         cout << "  solver --input weary,--yg-,pills,----- (one time)" << endl;
@@ -211,14 +210,14 @@ int main(int argc, char *argv[]) {
         cout << "  solver --interactive" << endl;
         return 0;
     }
-    const int verbose = cmdOptionIndex(argc, argv, "--verbose") != -1;
-    const int interactive = cmdOptionIndex(argc, argv, "--interactive") != -1;
+    const int verbose = CmdOptionIndex(argc, argv, "--verbose") != -1;
+    const int interactive = CmdOptionIndex(argc, argv, "--interactive") != -1;
     Context context = Context(verbose);
     if (interactive) {
-        while (solve_interactive(context));
+        while (SolveInteractive(context));
     } else {
         // + 1 to get the param after -s
-        int input_index = cmdOptionIndex(argc, argv, "--input") + 1;
+        int input_index = CmdOptionIndex(argc, argv, "--input") + 1;
         string history_string;
         if (input_index != 0) {
             history_string = string(argv[input_index]);
@@ -226,7 +225,7 @@ int main(int argc, char *argv[]) {
             history_string = string();
         }
 
-        cout << solve_one_time(context, history_string) << endl;
+        cout << SolveOneTime(context, history_string) << endl;
     }
 
     return 0;
