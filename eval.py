@@ -1,7 +1,6 @@
 import json
 import subprocess
 from functools import lru_cache
-from sys import stdout
 
 from tqdm import tqdm
 
@@ -30,36 +29,32 @@ def prepare_input(history):
     return ",".join(f"{guess},{state}" for guess, state in history)
 
 
-def start_game(agent, answer):
-    guess = agent.send("next")
+@lru_cache()
+def find_best_guess(input):
+    proc = subprocess.run(
+        ["./a.out", input],
+        encoding="UTF-8",
+        capture_output=True,
+    )
+    return parse_guess(proc.stdout)
+
+
+def start_game(answer):
+    history = []
     for _ in range(6):
+        input = prepare_input(history)
+        guess = find_best_guess(input)
         state = check_state(guess, answer)
+        pbar.write(f"{guess} {state}")
         if state == "ggggg":
             return True
-        guess = agent.send(state)
-
-
-def wordle_agent():
-    p = subprocess.Popen(
-        ["./a.out", "--interactive"],
-        encoding="UTF-8",
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-    )
-    while True:
-        guess = p.stdout.readline().strip()
-        state = yield guess
-        pbar.write(f"{guess} {state}")
-        print(state, file=p.stdin)
-        p.stdin.flush()
+        history.append((guess, state))
 
 
 tp = 0
 pbar = tqdm(words)
-agent = wordle_agent()
-next(agent)
 for answer in pbar:
-    is_win = start_game(agent, answer)
+    is_win = start_game(answer)
     if is_win:
         tp += 1
 
