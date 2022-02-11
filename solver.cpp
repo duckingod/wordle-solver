@@ -173,7 +173,7 @@ string solve(Context &context) {
     return min_guess;
 }
 
-string solve_single_round(Context &context, string &history_string) {
+string solve_one_time(Context &context, string &history_string) {
     History history = input_history(history_string);
     for (const auto &round: history) {
         vector<string> new_candidates = compute_candidates(context, round);
@@ -226,7 +226,7 @@ int main(int argc, char *argv[]) {
             history_string = string();
         }
 
-        cout << solve_single_round(context, history_string) << endl;
+        cout << solve_one_time(context, history_string) << endl;
     }
 
     return 0;
